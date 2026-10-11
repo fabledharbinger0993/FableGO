@@ -9,7 +9,7 @@ export interface ServiceConfig {
 }
 
 function isTailnetHost(hostname: string): boolean {
-  const normalized = hostname.toLowerCase();
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (normalized.endsWith('.ts.net')) {
     return true;
   }
@@ -32,7 +32,14 @@ export function validateTailnetUrl(value: string): string {
   } catch {
     throw new Error('Enter a valid Tailscale HTTPS address');
   }
-  if (parsed.protocol !== 'https:' || !isTailnetHost(parsed.hostname)) {
+  if (
+    parsed.protocol !== 'https:'
+    || parsed.username
+    || parsed.password
+    || parsed.search
+    || parsed.hash
+    || !isTailnetHost(parsed.hostname)
+  ) {
     throw new Error('Use an HTTPS Tailscale address ending in .ts.net or a Tailscale IP');
   }
   return parsed.toString().replace(/\/$/, '');
