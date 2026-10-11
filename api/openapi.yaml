@@ -1,0 +1,316 @@
+openapi: 3.1.0
+info:
+  title: FableGear Remote Service
+  version: 1.0.0
+  description: >
+    Tailnet-only, bearer-authenticated API for metadata and computer-owned jobs.
+    Record Room endpoints are metadata-only; file work runs through Chop Shop.
+servers:
+  - url: https://fablegear.example.ts.net
+    description: Example Tailscale service host; replace with the paired host.
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check authenticated service reachability
+      responses:
+        '200':
+          description: Service reachable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: ok
+                required: [status]
+  /library/tracks:
+    get:
+      operationId: listTracks
+      summary: Search Record Room track metadata
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: bpmMin
+          schema:
+            type: number
+        - in: query
+          name: bpmMax
+          schema:
+            type: number
+        - in: query
+          name: key
+          schema:
+            type: string
+        - in: query
+          name: camelot
+          schema:
+            type: string
+        - in: query
+          name: genre
+          schema:
+            type: string
+        - in: query
+          name: tag
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Metadata-only tracks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tracks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Track'
+                required: [tracks]
+  /playlists:
+    get:
+      operationId: listPlaylists
+      summary: List Record Room playlists
+      responses:
+        '200':
+          description: Playlist metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  playlists:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Playlist'
+                required: [playlists]
+  /playlists/{playlistId}:
+    put:
+      operationId: updatePlaylist
+      summary: Update a playlist in Record Room
+      parameters:
+        - in: path
+          name: playlistId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaylistUpdate'
+      responses:
+        '200':
+          description: Updated playlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+  /downloads:
+    post:
+      operationId: requestDownload
+      summary: Request a Chop Shop download job
+      description: Accepts a purchase reference only; no store client exists in FableGO.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                purchaseUrl:
+                  type: string
+                  format: uri
+                orderReference:
+                  type: string
+                dryRun:
+                  type: boolean
+                  default: false
+              anyOf:
+                - required: [purchaseUrl]
+                - required: [orderReference]
+      responses:
+        '202':
+          description: Download job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+  /imports:
+    post:
+      operationId: requestImport
+      summary: Request a Record Room database import job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                downloadJobId:
+                  type: string
+                dryRun:
+                  type: boolean
+                  default: false
+              required: [downloadJobId]
+      responses:
+        '202':
+          description: Import job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+  /exports/usb:
+    post:
+      operationId: requestUsbExport
+      summary: Preview or start a Chop Shop USB export job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playlistId:
+                  type: string
+                dryRun:
+                  type: boolean
+                  default: true
+                overwrite:
+                  type: boolean
+                  default: false
+                confirmed:
+                  type: boolean
+                  default: false
+              required: [playlistId, dryRun, overwrite, confirmed]
+              allOf:
+                - if:
+                    properties:
+                      dryRun:
+                        const: false
+                  then:
+                    properties:
+                      confirmed:
+                        const: true
+      responses:
+        '202':
+          description: Export preview or job
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Job'
+                  - type: object
+                    properties:
+                      dryRun:
+                        const: true
+                      itemCount:
+                        type: integer
+                    required: [dryRun, itemCount]
+  /jobs/{jobId}:
+    get:
+      operationId: getJob
+      summary: Read computer-owned job status
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+  /jobs:
+    get:
+      operationId: listJobs
+      summary: List durable jobs owned by the computer
+      responses:
+        '200':
+          description: Current and recent jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+                required: [jobs]
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Track:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        record:
+          type: string
+        bpm:
+          type: number
+        key:
+          type: string
+        camelot:
+          type: string
+        genre:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+      required: [id, title, artist, record, bpm, key, camelot, genre, tags]
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        trackIds:
+          type: array
+          items:
+            type: string
+      required: [id, name, trackIds]
+    PlaylistUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        trackIds:
+          type: array
+          items:
+            type: string
+      required: [name, trackIds]
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [download, import, usb_export]
+        status:
+          type: string
+          enum: [queued, running, done, failed]
+        message:
+          type: string
+      required: [id, kind, status]
