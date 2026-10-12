@@ -60,6 +60,15 @@ export async function mockGetTracks(): Promise<Track[]> {
   return structuredClone(tracks);
 }
 
+export async function mockUpdateTrackTags(trackId: string, tags: string[]): Promise<Track> {
+  const index = tracks.findIndex((track) => track.id === trackId);
+  if (index === -1) {
+    throw new Error('Track not found');
+  }
+  tracks[index] = { ...tracks[index], tags: [...tags] };
+  return structuredClone(tracks[index]);
+}
+
 export async function mockGetPlaylists(): Promise<Playlist[]> {
   return structuredClone(playlists);
 }

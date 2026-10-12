@@ -16,6 +16,8 @@ those changes here.
 
 - `GET /library/tracks`: return track/record metadata and support text search
   and BPM, musical key, Camelot key, genre, and tag filters.
+- `PUT /library/tracks/{trackId}/tags`: edit tags using the existing Record
+  Room database layer.
 - `GET /playlists`: return playlist metadata and ordered track IDs.
 - `PUT /playlists/{playlistId}`: update playlist metadata/membership in the
   existing database layer.

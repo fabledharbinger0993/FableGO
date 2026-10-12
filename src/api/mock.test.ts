@@ -1,8 +1,10 @@
 import {
   mockGetJob,
   mockGetPlaylists,
+  mockGetTracks,
   mockRequestUsbExport,
   mockUpdatePlaylist,
+  mockUpdateTrackTags,
   resetMockData,
 } from './mock';
 
@@ -20,6 +22,13 @@ describe('FableGear mock API', () => {
 
     expect(updated.trackIds).toEqual(['track-1', 'track-3']);
     expect((await mockGetPlaylists())[0].trackIds).toEqual(['track-1', 'track-3']);
+  });
+
+  it('updates track tags in Record Room metadata', async () => {
+    const updated = await mockUpdateTrackTags('track-1', ['warm-up', 'favorite']);
+
+    expect(updated.tags).toEqual(['warm-up', 'favorite']);
+    expect((await mockGetTracks())[0].tags).toEqual(['warm-up', 'favorite']);
   });
 
   it('reports USB export as queued, running, then done', async () => {

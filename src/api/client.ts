@@ -7,6 +7,7 @@ import {
   mockRequestDownload,
   mockRequestImport,
   mockRequestUsbExport,
+  mockUpdateTrackTags,
   mockUpdatePlaylist,
   type Job,
   type Playlist,
@@ -97,6 +98,16 @@ export async function getPlaylists(): Promise<Playlist[]> {
     '/playlists',
   );
   return Array.isArray(response) ? response : response.playlists;
+}
+
+export async function updateTrackTags(trackId: string, tags: string[]): Promise<Track> {
+  if (isMockMode) {
+    return mockUpdateTrackTags(trackId, tags);
+  }
+  return request<Track>(`/library/tracks/${encodeURIComponent(trackId)}/tags`, {
+    method: 'PUT',
+    body: JSON.stringify({ tags }),
+  });
 }
 
 export async function updatePlaylist(

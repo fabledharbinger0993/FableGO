@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/library/tracks/{trackId}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a track's tags in Record Room */
+        put: operations["updateTrackTags"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/playlists": {
         parameters: {
             query?: never;
@@ -184,6 +201,9 @@ export interface components {
             name: string;
             trackIds: string[];
         };
+        TrackTagsUpdate: {
+            tags: string[];
+        };
         Job: {
             id: string;
             /** @enum {string} */
@@ -250,6 +270,34 @@ export interface operations {
                     "application/json": {
                         tracks: components["schemas"]["Track"][];
                     };
+                };
+            };
+        };
+    };
+    updateTrackTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trackId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    tags: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Track metadata with updated tags */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Track"];
                 };
             };
         };

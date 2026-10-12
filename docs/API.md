@@ -22,6 +22,7 @@ The typed client declarations are generated into `src/api/schema.d.ts` with
 | --- | --- | --- | --- |
 | GET | `/health` | Service | Authenticated reachability check |
 | GET | `/library/tracks` | Record Room | Search/filter metadata |
+| PUT | `/library/tracks/{trackId}/tags` | Record Room | Edit track tags |
 | GET | `/playlists` | Record Room | List playlist metadata |
 | PUT | `/playlists/{playlistId}` | Record Room | Edit playlist name/order/membership |
 | POST | `/downloads` | Chop Shop | Request a download job from a purchase URL or order reference |

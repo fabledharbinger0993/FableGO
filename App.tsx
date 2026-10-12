@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +21,7 @@ import {
   requestImport,
   requestUsbExport,
   updatePlaylist,
+  updateTrackTags,
   type Job,
   type Playlist,
   type Track,
@@ -51,6 +53,8 @@ export default function App() {
   const [token, setToken] = useState('');
   const [purchaseReference, setPurchaseReference] = useState('');
   const [overwrite, setOverwrite] = useState(false);
+  const [tagEditor, setTagEditor] = useState<Track | null>(null);
+  const [tagDraft, setTagDraft] = useState('');
 
   const refresh = useCallback(async () => {
     const reachable = await checkServiceReachability();
@@ -157,6 +161,23 @@ export default function App() {
       ? playlist.trackIds.filter((id) => id !== trackId)
       : [...playlist.trackIds, trackId];
     void savePlaylist({ ...playlist, trackIds });
+  };
+
+  const saveTags = async () => {
+    if (!tagEditor || !online) {
+      return;
+    }
+    const tags = [...new Set(tagDraft.split(',').map((value) => value.trim()).filter(Boolean))];
+    try {
+      const updated = await updateTrackTags(tagEditor.id, tags);
+      const updatedTracks = tracks.map((track) => track.id === updated.id ? updated : track);
+      setTracks(updatedTracks);
+      await saveCachedTracks(updatedTracks).catch(() => undefined);
+      setTagEditor(null);
+      setNotice('Track tags updated.');
+    } catch {
+      setNotice('Track tags could not be updated.');
+    }
   };
 
   const queueDownload = async () => {
@@ -302,7 +323,17 @@ export default function App() {
                 <TextInput accessibilityLabel="Tag filter" placeholder="Tag" value={tag} onChangeText={setTag} style={styles.filterInput} placeholderTextColor={tokens.color.muted} />
               </View>
               <Text style={styles.resultCount}>{visibleTracks.length} TRACKS</Text>
-              {visibleTracks.map((track) => <TrackCard key={track.id} track={track} />)}
+              {visibleTracks.map((track) => (
+                <TrackCard
+                  key={track.id}
+                  track={track}
+                  online={online}
+                  onEditTags={() => {
+                    setTagEditor(track);
+                    setTagDraft(track.tags.join(', '));
+                  }}
+                />
+              ))}
               {!visibleTracks.length && <EmptyState text="No tracks match those filters." />}
             </>
           )}
@@ -424,6 +455,30 @@ export default function App() {
           )}
         </ScrollView>
       )}
+      <Modal
+        visible={tagEditor !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTagEditor(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Edit track tags</Text>
+            <Text style={styles.mutedText}>{tagEditor?.title}</Text>
+            <TextInput
+              accessibilityLabel="Track tags"
+              placeholder="Separate tags with commas"
+              placeholderTextColor={tokens.color.muted}
+              value={tagDraft}
+              onChangeText={setTagDraft}
+              style={styles.input}
+              autoCapitalize="none"
+            />
+            <ActionButton label="Save tags" disabled={!online} onPress={() => void saveTags()} />
+            <ActionButton label="Cancel" secondary onPress={() => setTagEditor(null)} />
+          </View>
+        </View>
+      </Modal>
       <View style={styles.tabBar}>
         {tabs.map((item) => (
           <TouchableOpacity
@@ -445,18 +500,29 @@ export default function App() {
   );
 }
 
-function TrackCard({ track }: { track: Track }) {
+function TrackCard({
+  track,
+  online,
+  onEditTags,
+}: {
+  track: Track;
+  online: boolean;
+  onEditTags: () => void;
+}) {
   return (
     <View style={styles.trackCard}>
-      <View style={styles.trackText}>
-        <Text style={styles.trackTitle}>{track.title}</Text>
-        <Text style={styles.trackSubtitle}>{track.artist} · {track.record}</Text>
-        <Text style={styles.trackTags}>{track.genre}  ·  {track.tags.join('  ·  ')}</Text>
+      <View style={styles.trackCardContent}>
+        <View style={styles.trackText}>
+          <Text style={styles.trackTitle}>{track.title}</Text>
+          <Text style={styles.trackSubtitle}>{track.artist} · {track.record}</Text>
+          <Text style={styles.trackTags}>{track.genre}  ·  {track.tags.join('  ·  ')}</Text>
+        </View>
+        <View style={styles.trackMeta}>
+          <Text style={styles.bpm}>{track.bpm}</Text>
+          <Text style={styles.trackSubtitle}>{track.key} · {track.camelot}</Text>
+        </View>
       </View>
-      <View style={styles.trackMeta}>
-        <Text style={styles.bpm}>{track.bpm}</Text>
-        <Text style={styles.trackSubtitle}>{track.key} · {track.camelot}</Text>
-      </View>
+      <ActionButton label="Edit tags" secondary disabled={!online} onPress={onEditTags} />
     </View>
   );
 }
@@ -598,6 +664,11 @@ const styles = StyleSheet.create({
     borderWidth: tokens.spacing.hairline,
     borderRadius: tokens.radius.card,
     padding: tokens.spacing.md,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: tokens.spacing.sm,
+  },
+  trackCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -683,6 +754,12 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.lg,
     textAlign: 'center',
     fontSize: tokens.type.body,
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: tokens.spacing.lg,
+    backgroundColor: tokens.color.background,
   },
   tabBar: {
     minHeight: tokens.size.tabBar,

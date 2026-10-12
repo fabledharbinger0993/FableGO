@@ -73,6 +73,35 @@ paths:
                     items:
                       $ref: '#/components/schemas/Track'
                 required: [tracks]
+  /library/tracks/{trackId}/tags:
+    put:
+      operationId: updateTrackTags
+      summary: Update a track's tags in Record Room
+      parameters:
+        - in: path
+          name: trackId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+              required: [tags]
+      responses:
+        '200':
+          description: Track metadata with updated tags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Track'
   /playlists:
     get:
       operationId: listPlaylists
@@ -300,6 +329,14 @@ components:
           items:
             type: string
       required: [name, trackIds]
+    TrackTagsUpdate:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+      required: [tags]
     Job:
       type: object
       properties:
